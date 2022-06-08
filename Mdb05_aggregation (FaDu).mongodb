@@ -150,21 +150,37 @@ db.ogrenciler.aggregate(
 //               (ingilizce yanında başka derste olabilir)
 //---------------------------------------------------------------------------------
                  
-
+use("okul")
+db.ogrenciler.aggregate(
+                        {$match:{dersler:"ingilizce"}},//ing value olan dersler dokumantlar match filtrelendi
+                        {$group:{_id:"$sube",ingAlanlar:{$sum:1}}}//sube group gore notların ortalaması alındı
+                        )
 
 //---------------------------------------------------------------------------------
 // QUERY 08 ... fizik veya matematik alanlarin subelere gore sayilari hesaplayan query create ediniz.
 //---------------------------------------------------------------------------------
-
+use("okul")
+db.ogrenciler.aggregate(
+                        {$match:{dersler:{$in:["fizik","mat"]}}},//ing value olan dersler dokumantlar match filtrelendi
+                        {$group:{_id:"$sube",fzkOrMat:{$sum:1}}}//sube group gore notların ortalaması alındı
+                        )
 
 //---------------------------------------------------------------------------------
 // QUERY 09 ...  sadece Fizik ve Mat dersini alanlarin subelere gore sayilari hesaplayan query create ediniz.
 //---------------------------------------------------------------------------------
-
+use("okul")
+db.ogrenciler.aggregate(
+                        {$match:{dersler:["fizik","mat"]}},//fizik veya mat value olan dersler dokumantlar match filtrelendi
+                        {$group:{_id:"$sube",fzkAndMat:{$sum:1}}}//sube group gore dersler saydırıldı
+                        )
 
 //---------------------------------------------------------------------------------
 // QUERY 10 ...  A subesindeki ogrencileri yasa gore azalan sirada, nota gore yukselen sirada
 //               siralayiniz.
 //---------------------------------------------------------------------------------
-
+use("okul")
+db.ogrenciler.aggregate(
+                        {$match:{sube:"A"}},//A value olan sube dokumantlar match filtrelendi
+                        {$sort:{yas:-1,not:1}}//yasa gore azalan, nota gore artan siralandı
+                        )
 
