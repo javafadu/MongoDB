@@ -141,7 +141,7 @@ db.ogrenciler.aggregate(
 //---------------------------------------------------------------------------------
 use("okul")
 db.ogrenciler.aggregate(
-    {yas:{$lt:30}},
+    {$match:{yas:{$lt:30}}},
     {$group:{_id:"$sube",notOrtalama:{$avg:"$not"}}}
 )
 
@@ -184,3 +184,88 @@ db.ogrenciler.aggregate(
                         {$sort:{yas:-1,not:1}}//yasa gore azalan, nota gore artan siralandı
                         )
 
+//---------------------------------------------------------------------------------
+// QUERY 11 ...  MEDYA veritabanı altında hesaplar ismiyle yeni bir collection olusturunuz
+//       ve degerleri giriniz.
+//---------------------------------------------------------------------------------
+use("MEDYA")
+db.hesaplar.insertMany(
+[{"isim" : "ali", "harcamalar":[-80, -40, -50, -120], "kazanc":[100, 150]},
+{"isim" : "Can", "harcamalar" : [-60, -30, -20], "kazanc" : [200, 50, 130] },
+{"isim" : "Canan", "harcamalar" : [-80, -40, -50], "kazanc" : [300, 450] },
+{"isim" : "Betul", "harcamalar" : [-80, -120], "kazanc" : [500, 50, 70, 10] },
+{"isim" : "Ahsen", "harcamalar" : [-140, -50, -120], "kazanc" : [400] },
+{"isim" : "Su", "harcamalar" : [-120], "kazanc" : [22, 375, 65] },
+{"isim" : "Pelin", "harcamalar" : [-180, -40, -70, -12], "kazanc" : [500, 650, 400]}]); 
+
+//---------------------------------------------------------------------------------
+// QUERY 12 ...  var olan dokumanlarda her kisi icin toplam harcama, toplam kazanc ve  
+//     bakiye degerlerini hesaplayarak sorguda dokumana ekleyen query create ediniz.
+//     bakiye'ye gore siralayiniz.
+//     NOT: Sorguda olmayan bir field icin $addFields metodu kullanilabilir. 
+//---------------------------------------------------------------------------------
+
+use("MEDYA")
+db.hesaplar.aggregate(
+                     {$addFields:{toplam_gider:{$sum:"$harcamalar"},toplam_gelir:{$sum:"$kazanc"}}},
+                     {$addFields:{bakiye:{$sum:["$toplam_gelir","$toplam_gider"]}}},
+                     {$project: {"harcamalar":0,"kazanc":0,_id:0 }}//aggregate de $project içine sadece console’de görülmesi istenmeyen ( console cosmetic) field’lar(:0) yazılır.
+                     )
+
+
+//---------------------------------------------------------------------------------
+// QUERY 13 ...  hesaplar collection'nin muhasabe adinda bir kopyasini olusturalim.
+//---------------------------------------------------------------------------------
+use ("MEDYA")
+db.hesaplar.aggregate (
+
+                    {$project: {_id:0} },
+                    // _id field kapatildi ki yeni coll. (muhasebe) unique id atamasi yapildi
+                    {$merge: {into:"muhasebe"} }
+                    // coll. daki documents muhasebe coll birlestirildi
+                    )
+//db.hesaplar.aggregate( {$merge: {into:“muhasabe”}});//Trick...id:0 kapatılmazsa eski id lerle kopya oluşturacaktı,
+
+//---------------------------------------------------------------------------------
+// QUERY 14 ...  hesaplar collection'nindan harcamalar kismini cikararak kazanclar adinda 
+//     yeni bir kopyasini olusturalim.
+//---------------------------------------------------------------------------------
+use ("MEDYA")
+db.hesaplar.aggregate (
+
+                    {$project: {harcamalar:0} },
+                    // harcamalar field cikarildi
+                    {$merge: {into:"kazanclar"} }
+                    // coll. daki documents kazanclar coll birlestirildi
+                    )
+
+
+//==================================================================================
+//                                  BULKWRITE (toplu yazmak)
+//  Birden fazla islemi ayni komutla gerceklestirmek icin BulkWrite kullanilabilir.
+// https://docs.mongodb.com/manual/reference/method/db.collection.bulkWrite/
+// db.collections.bulkWrite([
+//   {insertOne:{"document": {yazar: "........", fiyat:....., yayinYili : ...... }}},
+//   {updateOne:{"filter":{yazar: "......"}, "update": {$set: {fiyat:.......}}}},
+//   {replaceOne:{"filter":{yazar:"......."}, "replacement": {yazar: "......", fiyat:.....}}},
+//   {deleteOne:{"filter" : {yazar: "........."}}}
+//    ]);
+//==================================================================================
+use("MEDYA");
+db.hikayeler.insertMany(
+[{"yazar" : "Mehmet Bak", "fiyat" : 60, "yayinYili" : 1998 },
+{"yazar" : "Ali Gel", "fiyat" : 75, "yayinYili" : 2000 },
+{"yazar" : "Su Ak", "fiyat" : 90, "yayinYili" : 2005 },
+{"yazar" : "İsmet Kaç", "fiyat" : 35, "yayinYili" : 2010 },
+{"yazar" : "Pelin Su", "fiyat" : 80, "yayinYili" : 2020 },
+{"yazar" : "Suat Ok", "fiyat" : 54, "yayinYili" : 2001},
+{"yazar" : "Pelin Su", "fiyat" : 50, "yayinYili" : 2020 }]);
+
+
+use ("MEDYA")
+ db.hikayeler.bulkWrite([
+   {insertOne:{"document": {yazar: "Mirac", fiyat:100, yayinYili : 2022 }}},
+   {updateOne:{"filter":{yazar: "Ali Gel"}, "update": {$set: {fiyat:99}}}},
+   {replaceOne:{"filter":{yazar:"Su Ak"}, "replacement": {yazar: "Yusuf Atesmen", fiyat:111}}},
+   {deleteOne:{"filter" : {yazar: "Pelin Su"}}}
+    ]);
