@@ -60,6 +60,10 @@ db.romanlar.aggregate(
 //---------------------------------------------------------------------------------
 
 
+
+
+
+
 //==================================================================================
 //                       $LOOKUP (LEFT, RIGHT, INNER JOIN) --> şartlı birleşme
 //    {
@@ -95,6 +99,35 @@ db.siirler.insertMany(
 //              fiyatlarinin toplamini hesaplayan query create ediniz. 
 //              (INNER JOIN)   gözükmesini istediğimiz eklenecek field lar için ; addFields değil ,project içinde yazınız. 
 //---------------------------------------------------------------------------------
+
+
+
+//unwind:açmak,çözmek 2. foreign tabloyu da bağla, yolunu belirt, 
+// sonra iki tabloylada altta işlem yap , yazmazsak tek tabloyla işlem yapıyor. 
+// bu olmazsa sadece soldaki yazarları alır adetleri toplamaz
+
+use("MEDYA")
+db.romanlar.aggregate(
+                      {$lookup:{
+                       from:"siirler",//roman coll. ile siirler coll. ilşkilendirildi
+                       localField:"yazar",//romanlar coll. ilşki kurulacak field atandı
+                       foreignField:"muellif",//siirler coll. ilşki kurulacak field atandı
+                       as:"ortak_yazarlar"//ilişkilenedirlen field’lardan gelen value’lar için ortak field cretae edildi
+                               }
+                      },
+                     { $unwind:{path:"$ortak_yazarlar"}//unwind:açmak,çözmek  2. foreign tabloyu da bağla, yolunu belirt, sonra iki tabloylada altta işlem yap , yazmazsak tek tabloyla işlem yapıyor. bu olmazsa sadece soldaki yazarları alır adetleri toplamaz
+
+                     },
+                      { $project:{
+                                toplam_adet:{$sum:["$adet","$ortak_yazarlar.adet"]},
+                                toplam_fiyat:{$sum:["$fiyat","$ortak_yazarlar.fiyat"]},
+                                _id:0, 
+                                yazar:1
+                                 }
+                      }
+                      
+                      
+                     )
 
 
 
