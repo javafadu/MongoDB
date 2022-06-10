@@ -46,12 +46,16 @@ db.romanlar.aggregate(
 // QUERY 02 ... Her bir yayinevinin toplam kitap sayilarini (2 coll. icin) hesaplayan 
 //              ve siralayan query create ediniz. 
 //---------------------------------------------------------------------------------
+
+
 use("MEDYA")
 db.romanlar.aggregate(
-                      {$unionWith:{coll:"denemeler"}},//romanlar coll. ile denemeler coll. birleştirildi.Sıra önemli degildir
-                      {$group:{_id:"$yayinEvi",toplam_kitap_sayisi:{$sum:"$adet"}}},//adet field ters sıralandı.
-                      {$sort:{toplam_kitap_sayisi:1}}//_id field console da kaldırıldı
-                     )
+                        {$unionWith:{coll:"denemeler"}},
+                        {$group:{_id:"$yayinEvi",toplamKitap:{$sum:"$adet"}}},
+                        {$sort:{toplamKitap:1}}
+
+)
+
 
 
 //---------------------------------------------------------------------------------
@@ -59,7 +63,12 @@ db.romanlar.aggregate(
 //              geliri hesaplayan query create ediniz. (birleşen coll. larda carpma icin $multiply)
 //---------------------------------------------------------------------------------
 
+use("MEDYA")
+db.romanlar.aggregate(
+                        {$unionWith:{coll:"denemeler"}},
+                        {$group:{_id:"$yayinEvi",toplamGelir:{$sum:{$multiply:["$fiyat","$adet"]}}}}
 
+)
 
 
 
@@ -75,7 +84,13 @@ db.romanlar.aggregate(
 //        as: <cikis sutunu>
 //      }
 //   }
+//
+//      { $unwind:<field path> }
+//    }
+//    $unwind —>Bir collection’da en fazla elemanı olan sublist in hangisi olduğunu bulma‌ aksiyonu yapar
+//    $unwind operatörü dokümanın içerisindeki istenen listeye göre çoklama yapılmasını sağlar.
 //==================================================================================
+
 db.romanlar.insertMany(
 [{"yazar" : "Mehmet Bak", "fiyat" : 60, "yayinEvi" : "Yildiz", "adet": 1000 },
 {"yazar" : "Ali Gel", "fiyat" : 75, "yayinEvi" : "MaviAy", "adet": 1200 },
@@ -100,11 +115,41 @@ db.siirler.insertMany(
 //              (INNER JOIN)   gözükmesini istediğimiz eklenecek field lar için ; addFields değil ,project içinde yazınız. 
 //---------------------------------------------------------------------------------
 
+use ("MEDYA")
+db.romanlar.aggregate (
+                {
+                $lookup: {
+                  from: "siirler",
+                  localField: "yazar",
+                  foreignField: "muellif",
+                  as: "ortak_yazarlar"
+                }},
+
+                {
+                $unwind: {
+                  path: "$ortak_yazarlar"
+                } 
+                //unwind:açmak,çözmek 2. foreign tabloyu da bağla, yolunu belirt, 
+                // sonra iki tabloylada altta işlem yap , yazmazsak tek tabloyla işlem yapıyor. 
+                // bu olmazsa sadece soldaki yazarları alır adetleri toplamaz
+
+                },
 
 
-//unwind:açmak,çözmek 2. foreign tabloyu da bağla, yolunu belirt, 
-// sonra iki tabloylada altta işlem yap , yazmazsak tek tabloyla işlem yapıyor. 
-// bu olmazsa sadece soldaki yazarları alır adetleri toplamaz
+                {
+               
+                  $project: {
+                    toplam_adet: {$sum:["$adet","$ortak_yazarlar.adet"]},
+                    toplam_fiyat: {$sum:["$fiyat","$ortak_yazarlar.fiyat"]},
+                    _id:0,yazar:1
+                  }      
+                }
+
+
+)
+
+
+
 
 use("MEDYA")
 db.romanlar.aggregate(
@@ -136,6 +181,30 @@ db.romanlar.aggregate(
 //              (2 coll. icin) hesaplayan query create ediniz. 
 //---------------------------------------------------------------------------------
 
+use("MEDYA")
+db.romanlar.aggregate(
+
+                {
+                  $lookup: {
+                    from: 'siirler',
+                    localField: 'yazar',
+                    foreignField: 'muellif',
+                    as: 'roman_yazarlar'
+                  }      
+                },
+
+                {
+                $unwind: {path: "$roman_yazarlar", preserveNullAndEmptyArrays:true}
+                },
+                {
+                $project: {
+                  toplam_adet:{$sum:["$adet",{$ifNull:["$roman_yazarlar.adet",0]}]},
+                  _id:0, yazar:2
+                }
+                }
+
+
+)
 
 
 
